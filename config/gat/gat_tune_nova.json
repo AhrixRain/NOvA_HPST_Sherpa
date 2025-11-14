@@ -1,0 +1,28 @@
+{  
+    "gnn_layers": 8,
+    "gnn_neighbors": 8,
+    "gnn_hidden_channels": 128,
+
+    "dropout": 0.3,
+  
+    "epochs": 72,
+    "batch_size": 512,
+    "optimizer": "AdamW",
+
+    "learning_rate": 0.0047602,
+    "learning_rate_cycles": 4,
+    "learning_rate_warmup_epochs": 4.0,
+    "l2_penalty": 0.05,
+    "gradient_clip": 42.0,
+    "loss_gamma": 2.0,
+    "loss_beta": 0.9999999,
+  
+    "training_file": "/mnt/ironwolf_14t/users/ayankelevich/preprocessed_nova_miniprod6_1_cvnlabmaps.h5",
+    "train_validation_split": 0.85,
+    "num_dataloader_workers": 16,
+    "normalize_features": true,
+    "dataset_limit": 1.0,
+    "num_gpu": 4,
+    "verbose_output": 1
+  }
+  

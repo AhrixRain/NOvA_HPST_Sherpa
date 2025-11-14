@@ -1,0 +1,21 @@
+name: hpst
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - wheel
+  - cmake
+  - ninja
+  - setuptools
+  - pip:
+    - matplotlib
+    - scikit-learn
+    - h5py
+    - numba
+    - tensorboard
+    - rich
+    - wandb
+    - lightning==2.5.2

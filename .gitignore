@@ -1,0 +1,37 @@
+# pytorch / saved weights
+*.ckpt
+*.pth
+*.pt
+
+# training result dirs
+results/
+
+# tensorboard / runs / wandb
+wandb/
+.wandb/
+runs/
+
+# generic logs and profiler outputs
+*.txt
+*.log
+*.out
+
+# HPST model artifacts 
+HPST/
+
+# environment / virtualenvs / caches
+*.py[cod]
+
+# files
+test.py
+
+# allow keeping project metadata and config files
+# !environment.yml
+# !requirements.txt
+# !options.json
+# !README.md
+# !test_idxs.pt
+
+# optimizing files
+runs/
+sherpa/

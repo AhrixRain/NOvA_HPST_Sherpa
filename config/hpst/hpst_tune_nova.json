@@ -1,0 +1,38 @@
+{  
+    "pointnet_patch_embed_depth": 1,
+    "pointnet_patch_embed_channels": 256,
+    "pointnet_num_heads": 16,
+    "pointnet_patch_embed_groups": 6,
+    "pointnet_patch_embed_neighbours": 8,
+    "pointnet_enc_depths": [2,2,6,2],
+    "pointnet_enc_channels": [96, 192, 384, 512],
+    "pointnet_enc_groups": [12, 24, 48, 64],
+    "pointnet_enc_neighbours": [8, 8, 8, 8],
+    "pointnet_dec_depths": [1, 1, 1, 1],
+    "pointnet_dec_channels": [48, 96, 192, 384],
+    "pointnet_dec_groups": [6, 12, 24, 48],
+    "pointnet_dec_neighbours": [8, 8, 8, 8],
+    "pointnet_grid_sizes": [8, 16, 32, 64],
+    "dropout": 0.0,
+  
+    "epochs": 72,
+    "batch_size": 512,
+    "optimizer": "AdamW",
+  
+    "learning_rate": 0.009875351660720863,
+    "learning_rate_cycles": 1,
+    "learning_rate_warmup_epochs": 4.0,
+    "l2_penalty": 0.05,
+    "gradient_clip": 42.0,
+    "loss_gamma": 2.0,
+    "loss_beta": 0.9999999,
+  
+    "training_file": "/home/ziqinl12/Desktop/preprocessed_nova_miniprod6_1_cvnlabmaps.h5",
+    "train_validation_split": 0.85,
+    "num_dataloader_workers": 16,
+    "normalize_features": true,
+    "dataset_limit": 1.0,
+    "num_gpu": 1,
+    "verbose_output": 1
+  }
+  

@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0,1 nohup python scripts/train_gat.py --options_file "config/gat/gat_tune_nova.json" --name "gat_run" --log_dir "runs" --gpus 2 > gat.log 2>&1 &

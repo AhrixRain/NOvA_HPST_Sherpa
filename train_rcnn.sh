@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0,1 nohup python scripts/train_rcnn.py --options_file "config/rcnn/rcnn_tune_nova.json" --name "rcnn_run" --log_dir "runs" --gpus 2 > rcnn.log 2>&1 &
