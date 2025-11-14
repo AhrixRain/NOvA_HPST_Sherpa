@@ -13,10 +13,12 @@ from __future__ import annotations
 import argparse
 import copy
 import datetime
+import importlib
 import json
 import os
 from pathlib import Path
 import sys
+import types
 from typing import Any, Dict, List, Optional, Tuple
 
 import lightning.pytorch as pl
@@ -24,6 +26,46 @@ from lightning.pytorch.callbacks import Callback, EarlyStopping
 from lightning.pytorch.loggers import WandbLogger
 import pandas as pd
 import torch
+
+
+def _ensure_sherpa_without_gpy() -> None:
+    """Install lightweight stubs so Sherpa can import without the GPy/GPyOpt stack."""
+    def _maybe_stub(module_name: str, builder):
+        if module_name in sys.modules:
+            return
+        try:
+            importlib.import_module(module_name)
+        except Exception:
+            sys.modules[module_name] = builder()
+
+    def _build_gpy():
+        mod = types.ModuleType("GPy")
+
+        class _Unavailable:
+            def __getattr__(self, _):
+                raise ImportError(
+                    "GPy functionality is disabled. Use --algorithm random (default)."
+                )
+        mod.kern = _Unavailable()
+        mod.models = _Unavailable()
+        return mod
+
+    def _build_gpyopt():
+        mod = types.ModuleType("GPyOpt")
+
+        class _BayesOptDisabled:
+            def __init__(self, *_, **__):
+                raise ImportError(
+                    "GPyOpt is unavailable; only RandomSearch is supported."
+                )
+        mod.methods = types.SimpleNamespace(BayesianOptimization=_BayesOptDisabled)
+        return mod
+
+    _maybe_stub("GPy", _build_gpy)
+    _maybe_stub("GPyOpt", _build_gpyopt)
+
+
+_ensure_sherpa_without_gpy()
 
 from sherpa import Choice, Continuous, Discrete, Parameter, Study
 from sherpa.algorithms import RandomSearch
