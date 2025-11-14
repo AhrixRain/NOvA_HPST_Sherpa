@@ -137,7 +137,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--trials",
         type=int,
-        default=1,
+        default=64,
         help="Maximum number of Sherpa trials to execute.",
     )
     parser.add_argument(
@@ -156,13 +156,13 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--patience",
         type=int,
-        default=8,
+        default=3,
         help="Validation patience (epochs) for early stopping callbacks.",
     )
     parser.add_argument(
         "--max_epochs",
         type=int,
-        default=72,
+        default=16,
         help="Optional hard cap for epochs per trial. Overrides config if set.",
     )
     parser.add_argument(
@@ -186,13 +186,13 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--train-max-samples",
         type=int,
-        default=6000,
-        help="Optional cap on the number of training samples per Sherpa trial. Max: 2M",
+        default=20000,
+        help="Optional cap on the number of training samples per Sherpa trial. Max: 2M. Set to None for all.",
     )
     parser.add_argument(
         "--val-max-samples",
         type=int,
-        default=2000,
+        default=6000,
         help="Optional cap on the number of validation samples per Sherpa trial. Max: 346k",
     )
     return parser.parse_args()
@@ -224,14 +224,14 @@ def _parameter_space() -> List[Parameter]:
     """Fixed Sherpa parameter space tailored to hpst_tune_nova.json."""
     return [
         Continuous("learning_rate", [1e-5, 1e-2], scale="log"),
-        Continuous("l2_penalty", [5e-3, 1e-1], scale="log"),
-        Choice("batch_size", [64, 128, 256]),
+        Continuous("l2_penalty", [1e-4, 1e-1], scale="log"),
+        Choice("batch_size", [256, 384, 512]),
         Continuous("gradient_clip", [16.0, 80.0]),
         Discrete("learning_rate_warmup_epochs", [2, 4, 6, 8]),
         Discrete("learning_rate_cycles", [1, 2, 3]),
         Continuous("loss_gamma", [1.0, 4.0]),
-        Continuous("loss_beta", [0.95, 0.9999999]),
-        Choice("epochs", [1]),
+        Continuous("loss_beta", [0.999, 0.9999999]),
+        Choice("epochs", [16]),
     ]
 
 
