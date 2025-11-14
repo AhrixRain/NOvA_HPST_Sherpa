@@ -26,7 +26,7 @@ import pandas as pd
 import torch
 
 from sherpa import Choice, Continuous, Discrete, Parameter, Study
-from sherpa.algorithms import GPyOpt, RandomSearch
+from sherpa.algorithms import RandomSearch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -143,9 +143,9 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--algorithm",
         type=str,
-        default="bayes",
-        choices=["bayes", "random"],
-        help="Search algorithm to use (Bayesian via GPyOpt or random search).",
+        default="random",
+        choices=["random"],
+        help="Sherpa search algorithm (GPyOpt disabled; random search only).",
     )
     parser.add_argument(
         "--output_dir",
@@ -316,12 +316,10 @@ def _build_trainer(
 
 
 def _create_algorithm(name: str, max_trials: int):
-    name = name.lower()
-    if name == "bayes":
-        return GPyOpt(max_num_trials=max_trials)
-    if name == "random":
-        return RandomSearch(max_num_trials=max_trials)
-    raise ValueError(f"Unsupported Sherpa algorithm: {name}")
+    """Return the configured Sherpa algorithm (currently RandomSearch only)."""
+    if name.lower() != "random":
+        raise ValueError("Only 'random' algorithm is supported now that GPyOpt is disabled.")
+    return RandomSearch(max_num_trials=max_trials)
 
 
 def _run_single_trial(
