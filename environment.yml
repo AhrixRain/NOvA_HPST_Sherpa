@@ -1,46 +1,21 @@
 name: hpst_sherpa
 channels:
   - pytorch
-  - nvidia
-  - pyg
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
-  - pytorch=2.5.1
-  - pytorch-cuda=12.1
-  - torchvision=0.20
-  - torchaudio=2.5
-  - pyg=2.5
-  - torch-geometric=2.5
-  - torch-scatter=2.1
-  - torch-cluster=1.6
-  - torch-sparse=0.6
-  - numpy=1.26
-  - pandas=2.2
-  - scipy=1.13
-  - scikit-learn=1.5
-  - seaborn=0.13
-  - matplotlib=3.8
-  - h5py=3.11
-  - numba=0.59
-  - tensorboard=2.16
-  - tqdm=4.66
-  - lightning=2.5.2
-  - torchmetrics=1.4
-  - rich=13.7
-  - wandb=0.17
-  - cython=3.0
+  - pip
+  - wheel
   - cmake
   - ninja
-  - pip
-  - setuptools>=70
-  - wheel
+  - setuptools
   - pip:
-      - flash-attn==2.6.3
-      - pytorch-3dunet>=1.2.0
-      - parameter-sherpa==1.0.6
-      - GPy==1.12.0
-      - GPyOpt==1.2.6
-      - paramz>=0.9.5
-      - pyDOE>=0.3.8
+    - matplotlib
+    - scikit-learn
+    - h5py
+    - numba
+    - tensorboard
+    - rich
+    - wandb
+    - lightning==2.5.2
