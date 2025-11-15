@@ -243,8 +243,8 @@ def _parse_arguments() -> argparse.Namespace:
         help="Enable WandB logging."
     )
     parser.add_argument(
-        "--wandb_project", t
-        ype=str, 
+        "--wandb_project",
+        type=str, 
         default="HPST", 
         help="WandB project name."
     )
