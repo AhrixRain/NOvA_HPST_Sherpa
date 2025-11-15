@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback, EarlyStopping
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.strategies import DDPStrategy
 import pandas as pd
 import torch
 
@@ -339,17 +340,19 @@ def _apply_trial_parameters(options: Options, params: Dict[str, Any]) -> None:
     options.gradient_clip = max(0.0, float(options.gradient_clip))
 
 
-def _resolve_devices(requested_gpus: int) -> Tuple[str, int]:
+def _resolve_devices(requested_gpus: int) -> Tuple[str, int, Optional[DDPStrategy]]:
     available = torch.cuda.device_count()
     if requested_gpus > 0 and available > 0:
-        return "gpu", min(requested_gpus, available)
-    return "cpu", 1
+        devices = min(requested_gpus, available)
+        strategy = DDPStrategy(find_unused_parameters=False)
+        return "gpu", devices, strategy
+    return "cpu", 1, None
 
 
 def _build_trainer(
     options: Options, patience: int, trial_desc: str, logger: Optional[WandbLogger]
 ) -> Tuple[pl.Trainer, BestMetricTracker]:
-    accelerator, devices = _resolve_devices(options.num_gpu)
+    accelerator, devices, strategy = _resolve_devices(options.num_gpu)
     options.num_gpu = devices if accelerator == "gpu" else 0
 
     tracker = BestMetricTracker("val_accuracy")
@@ -373,6 +376,7 @@ def _build_trainer(
         gradient_clip_val=options.gradient_clip,
         accelerator=accelerator,
         devices=devices,
+        strategy=strategy,
         callbacks=callbacks,
         log_every_n_steps=10,
         num_sanity_val_steps=0,
