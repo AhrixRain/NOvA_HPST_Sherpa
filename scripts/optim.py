@@ -237,6 +237,24 @@ def _parse_arguments() -> argparse.Namespace:
         default=6000,
         help="Optional cap on the number of validation samples per Sherpa trial. Max: 346k",
     )
+    parser.add_argument(
+        "--use_wandb", 
+        action="store_true", 
+        help="Enable WandB logging."
+    )
+    parser.add_argument(
+        "--wandb_project", t
+        ype=str, 
+        default="HPST", 
+        help="WandB project name."
+    )
+    parser.add_argument(
+        "--logdir", 
+        type=str, 
+        default="runs", 
+        help="Base log directory."
+    )
+
     return parser.parse_args()
 
 
@@ -279,24 +297,32 @@ def _parameter_space() -> List[Parameter]:
 
 
 def _prepare_wandb_logger(args, trial_index, options):
+    """Create a WandB logger consistent with train.py logging style."""
     if not args.use_wandb:
         return None
 
-    run_name = f"trial_{trial_index}"
+    # Create a unique readable run name like trial_003
+    run_name = f"trial_{trial_index:03d}"
 
-    # init wandb logger with config directly
+    # Mimic train.py structure: logs under {logdir}/hpst/<timestamp>/
+    timestamp = datetime.datetime.now().strftime("%m%d-%H%M")
+    run_id = f"{timestamp}_t{trial_index}"
+    base_dir = Path(args.logdir) / "hpst" / run_id
+
     logger = WandbLogger(
         project=args.wandb_project,
         name=run_name,
-        save_dir=args.logdir,
+        id=f"hpst_trial_{trial_index}",
+        save_dir=str(base_dir.parent),
         log_model=False,
-        config=vars(options),  # <<< KEY CHANGE
+        resume="allow",
     )
 
-    # IMPORTANT: remove this line completely:
-    # logger.experiment.config.update(vars(options), allow_val_change=True)
+    # Match train.py → update_config(logger, config_dict)
+    logger.experiment.config.update(vars(options), allow_val_change=True)
 
     return logger
+
 
 
 def _apply_trial_parameters(options: Options, params: Dict[str, Any]) -> None:
