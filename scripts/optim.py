@@ -187,7 +187,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--trials",
         type=int,
-        default=64,
+        default=128,
         help="Maximum number of Sherpa trials to execute.",
     )
     parser.add_argument(
@@ -206,7 +206,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--patience",
         type=int,
-        default=3,
+        default=4,
         help="Validation patience (epochs) for early stopping callbacks.",
     )
     parser.add_argument(
@@ -236,13 +236,13 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--train-max-samples",
         type=int,
-        default=20000,
+        default=200000,
         help="Optional cap on the number of training samples per Sherpa trial. Max: 2M. Set to None for all.",
     )
     parser.add_argument(
         "--val-max-samples",
         type=int,
-        default=6000,
+        default=50000,
         help="Optional cap on the number of validation samples per Sherpa trial. Max: 346k",
     )
     parser.add_argument(
@@ -291,10 +291,10 @@ def _parameter_space() -> List[Parameter]:
         Choice("batch_size", [128, 192, 256]),
         Continuous("gradient_clip", [16.0, 80.0]),
         Discrete("learning_rate_warmup_epochs", [2, 4, 6, 8]),
-        Discrete("learning_rate_cycles", [1, 2, 3]),
+        Choice("learning_rate_cycles", [1]),
         Continuous("loss_gamma", [1.0, 4.0]),
         Continuous("loss_beta", [0.999, 0.9999999]),
-        Choice("epochs", [16]),
+        Choice("epochs", [24]),
     ]
 
 
@@ -309,8 +309,8 @@ def _prepare_wandb_logger(args: argparse.Namespace, trial_index: int, options: O
 
     logger = WandbLogger(
         project=args.wandb_project,
-        name=f"hpst_sherpa_trial_{trial_index}",
-        id=f"hpst_optim_server_{trial_index}",
+        name=f"hpst_sherpa_trial_{trial_index}_Lsize",
+        id=f"hpst_optim_server_{trial_index}_Lsize",
         save_dir=str(base_dir.parent),
     )
     update_config(logger, vars(options))
