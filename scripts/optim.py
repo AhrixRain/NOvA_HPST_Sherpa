@@ -310,7 +310,7 @@ def _prepare_wandb_logger(args: argparse.Namespace, trial_index: int, options: O
     logger = WandbLogger(
         project=args.wandb_project,
         name=f"hpst_sherpa_trial_{trial_index}",
-        id="hpst_server",
+        id="hpst_optim_server",
         save_dir=str(base_dir.parent),
     )
     update_config(logger, vars(options))
