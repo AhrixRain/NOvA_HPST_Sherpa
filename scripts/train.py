@@ -169,7 +169,7 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--training_file", type=str, default="../data/training_prong_pixels_sparse_64.h5",
                         help="Input file containing training data.")
 
-    parser.add_argument("-o", "--options_file", type=str, default= "config/hpst/hpst_tune_nova.json",
+    parser.add_argument("-o", "--options_file", type=str, default= "config/hpst/hpst_tune_nova_baseline.json",
                         help="JSON file with option overloads.")
 
     parser.add_argument("-c", "--checkpoint", type=str, default=None,

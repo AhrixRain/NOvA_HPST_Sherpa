@@ -19,7 +19,9 @@ import os
 from pathlib import Path
 import sys
 import types
-from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Sequence as SequenceABC
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback, EarlyStopping
@@ -223,6 +225,12 @@ def _parse_arguments() -> argparse.Namespace:
         help="GPUs to request per trial (defaults to value in options file).",
     )
     parser.add_argument(
+        "--parallel_trials",
+        type=int,
+        default=None,
+        help="Maximum number of Sherpa trials to run concurrently. Defaults to auto-detect from available GPUs.",
+    )
+    parser.add_argument(
         "--num_workers",
         type=int,
         default=16,
@@ -340,20 +348,39 @@ def _apply_trial_parameters(options: Options, params: Dict[str, Any]) -> None:
     options.gradient_clip = max(0.0, float(options.gradient_clip))
 
 
-def _resolve_devices(requested_gpus: int) -> Tuple[str, int, Optional[DDPStrategy]]:
+def _resolve_devices(
+    requested_gpus: int, device_ids: Optional[Sequence[int]] = None
+) -> Tuple[str, Union[int, Sequence[int]], Optional[DDPStrategy]]:
+    if device_ids is not None:
+        ids = [int(idx) for idx in device_ids if idx is not None]
+        if not ids:
+            return "cpu", 1, None
+        strategy = DDPStrategy(find_unused_parameters=False) if len(ids) > 1 else None
+        return "gpu", ids, strategy
+
     available = torch.cuda.device_count()
     if requested_gpus > 0 and available > 0:
         devices = min(requested_gpus, available)
-        strategy = DDPStrategy(find_unused_parameters=False)
+        strategy = DDPStrategy(find_unused_parameters=False) if devices > 1 else None
         return "gpu", devices, strategy
     return "cpu", 1, None
 
 
 def _build_trainer(
-    options: Options, patience: int, trial_desc: str, logger: Optional[WandbLogger]
+    options: Options,
+    patience: int,
+    trial_desc: str,
+    logger: Optional[WandbLogger],
+    device_ids: Optional[Sequence[int]] = None,
 ) -> Tuple[pl.Trainer, BestMetricTracker]:
-    accelerator, devices, strategy = _resolve_devices(options.num_gpu)
-    options.num_gpu = devices if accelerator == "gpu" else 0
+    accelerator, devices, strategy = _resolve_devices(options.num_gpu, device_ids)
+    if accelerator == "gpu":
+        if isinstance(devices, SequenceABC):
+            options.num_gpu = len(devices)
+        else:
+            options.num_gpu = int(devices)
+    else:
+        options.num_gpu = 0
 
     tracker = BestMetricTracker("val_accuracy")
     callbacks: List[Callback] = [tracker, TrialProgressPrinter(options.epochs, trial_desc)]
@@ -396,19 +423,20 @@ def _create_algorithm(name: str, max_trials: int):
 def _run_single_trial(
     trial_index: int,
     total_trials: int,
-    trial,
+    trial_params: Dict[str, Any],
     args: argparse.Namespace,
     base_options: Options,
+    gpu_ids: Optional[Sequence[int]] = None,
 ) -> Dict[str, Any]:
     trial_desc = f"Trial {trial_index}/{total_trials}"
-    print(f"\n=== {trial_desc} | params: {trial.parameters} ===")
+    print(f"\n=== {trial_desc} | params: {trial_params} ===")
     pl.seed_everything(args.seed + trial_index, workers=True)
 
     trial_options: Options = copy.deepcopy(base_options)
-    _apply_trial_parameters(trial_options, trial.parameters)
+    _apply_trial_parameters(trial_options, trial_params)
 
     trial_logger = _prepare_wandb_logger(args, trial_index, trial_options)
-    trainer, tracker = _build_trainer(trial_options, args.patience, trial_desc, trial_logger)
+    trainer, tracker = _build_trainer(trial_options, args.patience, trial_desc, trial_logger, gpu_ids)
     model = HeterogenousPointSetTrainer(trial_options)
 
     try:
@@ -446,6 +474,38 @@ def _run_single_trial(
     return metrics
 
 
+def _calculate_parallel_trials(
+    requested_parallel: Optional[int],
+    total_trials: int,
+    available_gpu_ids: Sequence[int],
+    gpus_per_trial: int,
+) -> int:
+    if gpus_per_trial > 0 and len(available_gpu_ids) > 0:
+        max_allowed = max(1, len(available_gpu_ids) // max(1, gpus_per_trial))
+        if requested_parallel is not None:
+            desired = max(1, requested_parallel)
+            choice = min(desired, max_allowed)
+        else:
+            choice = max_allowed
+    else:
+        choice = max(1, requested_parallel) if requested_parallel is not None else 1
+
+    return max(1, min(choice, total_trials))
+
+
+def _acquire_gpu_ids(pool: List[int], count: int) -> Optional[List[int]]:
+    if count <= 0:
+        return []
+    if len(pool) < count:
+        return None
+    ids = [pool.pop() for _ in range(count)]
+    return ids
+
+
+def _release_gpu_ids(pool: List[int], gpu_ids: Sequence[int]) -> None:
+    pool.extend(int(idx) for idx in gpu_ids)
+
+
 def run() -> None:
     args = _parse_arguments()
     pl.seed_everything(args.seed, workers=True)
@@ -454,6 +514,27 @@ def run() -> None:
     parameter_space = _parameter_space()
     os.makedirs(args.output_dir, exist_ok=True)
     algorithm = _create_algorithm(args.algorithm, args.trials)
+
+    available_gpu_ids = list(range(torch.cuda.device_count()))
+    requested_gpus = max(0, int(base_options.num_gpu))
+    if requested_gpus > len(available_gpu_ids):
+        if available_gpu_ids:
+            print(
+                f"Requested {requested_gpus} GPU(s) per trial but only {len(available_gpu_ids)} "
+                f"device(s) detected. Using {len(available_gpu_ids)}."
+            )
+        else:
+            print("GPU training requested but no CUDA devices detected. Falling back to CPU.")
+        requested_gpus = len(available_gpu_ids)
+    base_options.num_gpu = requested_gpus
+
+    parallel_trials = _calculate_parallel_trials(
+        args.parallel_trials, args.trials, available_gpu_ids, base_options.num_gpu
+    )
+    print(
+        f"Scheduling up to {parallel_trials} parallel trial(s). "
+        f"GPUs per trial: {base_options.num_gpu if base_options.num_gpu > 0 else 'CPU'}."
+    )
 
     study = Study(
         parameters=parameter_space,
@@ -464,18 +545,73 @@ def run() -> None:
     )
 
     completed = 0
-    for trial in study:
-        completed += 1
-        metrics = _run_single_trial(completed, args.trials, trial, args, base_options)
-        study.add_observation(
-            trial=trial,
-            iteration=metrics["epochs"],
-            objective=metrics["val_accuracy"],
-            context=metrics,
-        )
-        study.finalize(trial)
-        if completed >= args.trials:
-            break
+    if parallel_trials <= 1:
+        for trial in study:
+            completed += 1
+            metrics = _run_single_trial(completed, args.trials, trial.parameters, args, base_options)
+            study.add_observation(
+                trial=trial,
+                iteration=metrics["epochs"],
+                objective=metrics["val_accuracy"],
+                context=metrics,
+            )
+            study.finalize(trial)
+            if completed >= args.trials:
+                break
+    else:
+        free_gpu_ids = available_gpu_ids.copy()
+        trial_iter = iter(study)
+        scheduled = 0
+        futures: Dict[Any, Tuple[Any, Sequence[int]]] = {}
+        with ProcessPoolExecutor(max_workers=parallel_trials) as executor:
+            while completed < args.trials:
+                # Launch new trials while slots and GPUs are available.
+                while len(futures) < parallel_trials and scheduled < args.trials:
+                    if base_options.num_gpu > 0:
+                        gpu_ids = _acquire_gpu_ids(free_gpu_ids, base_options.num_gpu)
+                        if gpu_ids is None:
+                            break
+                    else:
+                        gpu_ids = []
+                    try:
+                        trial = next(trial_iter)
+                    except StopIteration:
+                        break
+                    scheduled += 1
+                    future = executor.submit(
+                        _run_single_trial,
+                        scheduled,
+                        args.trials,
+                        trial.parameters,
+                        args,
+                        base_options,
+                        gpu_ids,
+                    )
+                    futures[future] = (trial, gpu_ids)
+
+                if not futures:
+                    if scheduled >= args.trials:
+                        break
+                    continue
+
+                done_future = next(as_completed(list(futures.keys())))
+                trial, gpu_ids = futures.pop(done_future)
+                try:
+                    metrics = done_future.result()
+                finally:
+                    if gpu_ids:
+                        _release_gpu_ids(free_gpu_ids, gpu_ids)
+
+                completed += 1
+                study.add_observation(
+                    trial=trial,
+                    iteration=metrics["epochs"],
+                    objective=metrics["val_accuracy"],
+                    context=metrics,
+                )
+                study.finalize(trial)
+                if completed >= args.trials:
+                    break
 
     study.save()
     best_result = study.get_best_result()
