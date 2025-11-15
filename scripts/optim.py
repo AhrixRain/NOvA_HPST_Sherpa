@@ -288,7 +288,7 @@ def _parameter_space() -> List[Parameter]:
     return [
         Continuous("learning_rate", [1e-5, 1e-2], scale="log"),
         Continuous("l2_penalty", [1e-4, 1e-1], scale="log"),
-        Choice("batch_size", [256, 384, 512]),
+        Choice("batch_size", [128, 192, 256]),
         Continuous("gradient_clip", [16.0, 80.0]),
         Discrete("learning_rate_warmup_epochs", [2, 4, 6, 8]),
         Discrete("learning_rate_cycles", [1, 2, 3]),
