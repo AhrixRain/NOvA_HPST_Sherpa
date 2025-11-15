@@ -277,19 +277,25 @@ def _parameter_space() -> List[Parameter]:
     ]
 
 
-def _prepare_wandb_logger(args: argparse.Namespace, trial_index: int, options: Options) -> WandbLogger:
-    log_root = Path(args.output_dir).resolve() / "wandb"
-    log_root.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%m%d-%H%M-%S")
-    run_id = f"{timestamp}-trial{trial_index}"
+
+def _prepare_wandb_logger(args, trial_index, options):
+    if not args.use_wandb:
+        return None
+
+    run_name = f"trial_{trial_index}"
+
+    # init wandb logger with config directly
     logger = WandbLogger(
-        project="HPST",
-        name=f"hpst_trial_{trial_index}",
-        id=run_id,
-        save_dir=str(log_root),
-        reinit=True,
+        project=args.wandb_project,
+        name=run_name,
+        save_dir=args.logdir,
+        log_model=False,
+        config=vars(options),  # <<< KEY CHANGE
     )
-    logger.experiment.config.update(vars(options), allow_val_change=True)
+
+    # IMPORTANT: remove this line completely:
+    # logger.experiment.config.update(vars(options), allow_val_change=True)
+
     return logger
 
 
