@@ -32,7 +32,7 @@
     "num_dataloader_workers": 16,
     "normalize_features": true,
     "dataset_limit": 1.0,
-    "num_gpu": 4,
+    "num_gpu": 2,
     "verbose_output": 1
   }
   
