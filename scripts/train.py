@@ -109,7 +109,7 @@ def main(
         run_id = f"{timestamp}"
         base_dir = Path(log_dir) / "hpst" / run_id  
 
-        logger = WandbLogger(project='HPST', name=name, id='hpst_tune_train', save_dir=str(base_dir.parent))
+        logger = WandbLogger(project='HPST', name=name, id='hpst_tune_train_r2', save_dir=str(base_dir.parent))
         update_config(logger, options)
 
 
