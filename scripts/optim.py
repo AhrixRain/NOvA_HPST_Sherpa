@@ -160,6 +160,14 @@ class TrialProgressPrinter(Callback):
         print(f"{self.description} finished after {completed} epochs.", flush=True)
 
 
+def update_config(logger: WandbLogger, config_dict: Dict[str, Any]) -> None:
+    """Mirror scripts/train.py helper for syncing options to WandB."""
+    try:
+        logger.experiment.config.update(config_dict, allow_val_change=True)
+    except Exception as exc:
+        print(f"Warning: unable to sync WandB config ({exc}).", flush=True)
+
+
 def _parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Sherpa hyperparameter optimisation for the HPST network."
@@ -238,11 +246,6 @@ def _parse_arguments() -> argparse.Namespace:
         help="Optional cap on the number of validation samples per Sherpa trial. Max: 346k",
     )
     parser.add_argument(
-        "--use_wandb", 
-        action="store_true", 
-        help="Enable WandB logging."
-    )
-    parser.add_argument(
         "--wandb_project",
         type=str, 
         default="HPST", 
@@ -296,31 +299,21 @@ def _parameter_space() -> List[Parameter]:
 
 
 
-def _prepare_wandb_logger(args, trial_index, options):
-    """Create a WandB logger consistent with train.py logging style."""
-    if not args.use_wandb:
-        return None
-
-    # Create a unique readable run name like trial_003
-    run_name = f"trial_{trial_index:03d}"
-
-    # Mimic train.py structure: logs under {logdir}/hpst/<timestamp>/
+def _prepare_wandb_logger(args: argparse.Namespace, trial_index: int, options: Options) -> WandbLogger:
+    """Match the simple WandB setup from scripts/train.py."""
+    log_root = Path(args.logdir).resolve() if getattr(args, "logdir", None) else Path(os.getcwd())
     timestamp = datetime.datetime.now().strftime("%m%d-%H%M")
-    run_id = f"{timestamp}_t{trial_index}"
-    base_dir = Path(args.logdir) / "hpst" / run_id
+    run_id = f"{timestamp}"
+    base_dir = log_root / "hpst" / run_id
+    base_dir.parent.mkdir(parents=True, exist_ok=True)
 
     logger = WandbLogger(
         project=args.wandb_project,
-        name=run_name,
-        id=f"hpst_trial_{trial_index}",
+        name=f"hpst_trial_{trial_index}",
+        id="hpst_local",
         save_dir=str(base_dir.parent),
-        log_model=False,
-        resume="allow",
     )
-
-    # Match train.py → update_config(logger, config_dict)
-    logger.experiment.config.update(vars(options), allow_val_change=True)
-
+    update_config(logger, vars(options))
     return logger
 
 
