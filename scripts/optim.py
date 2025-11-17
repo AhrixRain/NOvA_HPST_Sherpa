@@ -312,14 +312,14 @@ def _prepare_wandb_logger(args: argparse.Namespace, trial_index: int, options: O
     """Match the simple WandB setup from scripts/train.py."""
     log_root = Path(args.logdir).resolve() if getattr(args, "logdir", None) else Path(os.getcwd())
     timestamp = datetime.datetime.now().strftime("%m%d-%H%M")
-    run_id = f"{timestamp}_6657"
+    run_id = f"{timestamp}_6656"
     base_dir = log_root / "hpst" / run_id
     base_dir.parent.mkdir(parents=True, exist_ok=True)
 
     logger = WandbLogger(
         project=args.wandb_project,
-        name=f"hpst_sherpa_trial_{trial_index}_R3",
-        id=f"hpst_optim_server_{trial_index}_R3",
+        name=f"hpst_sherpa_trial_{trial_index}_R4",
+        id=f"hpst_optim_server_{trial_index}_R4",
         save_dir=str(base_dir.parent),
     )
     update_config(logger, vars(options))
