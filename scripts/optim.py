@@ -398,7 +398,7 @@ def _build_trainer(
             )
         )
 
-    trainer = pl.Trainer(
+    trainer_kwargs: Dict[str, Any] = dict(
         max_epochs=options.epochs,
         logger=logger,
         enable_checkpointing=False,
@@ -406,13 +406,16 @@ def _build_trainer(
         gradient_clip_val=options.gradient_clip,
         accelerator=accelerator,
         devices=devices,
-        strategy=strategy,
         callbacks=callbacks,
         log_every_n_steps=10,
         num_sanity_val_steps=0,
         check_val_every_n_epoch=1,
         enable_progress_bar=False,
     )
+    if strategy is not None:
+        trainer_kwargs["strategy"] = strategy
+
+    trainer = pl.Trainer(**trainer_kwargs)
     return trainer, tracker
 
 
