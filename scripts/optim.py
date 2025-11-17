@@ -228,7 +228,10 @@ def _parse_arguments() -> argparse.Namespace:
         "--parallel_trials",
         type=int,
         default=None,
-        help="Maximum number of Sherpa trials to run concurrently. Defaults to auto-detect from available GPUs.",
+        help=(
+            "Maximum number of Sherpa trials to run concurrently. "
+            "Defaults to auto-detect from available GPUs, except single-GPU trials default to 1 to avoid oversubscription."
+        ),
     )
     parser.add_argument(
         "--num_workers",
@@ -528,9 +531,25 @@ def run() -> None:
         requested_gpus = len(available_gpu_ids)
     base_options.num_gpu = requested_gpus
 
-    parallel_trials = _calculate_parallel_trials(
-        args.parallel_trials, args.trials, available_gpu_ids, base_options.num_gpu
-    )
+    auto_parallel_clamped = False
+    if args.parallel_trials is None:
+        parallel_trials = _calculate_parallel_trials(
+            None, args.trials, available_gpu_ids, base_options.num_gpu
+        )
+        if base_options.num_gpu <= 1 and parallel_trials > 1:
+            parallel_trials = 1
+            auto_parallel_clamped = True
+    else:
+        parallel_trials = _calculate_parallel_trials(
+            args.parallel_trials, args.trials, available_gpu_ids, base_options.num_gpu
+        )
+
+    if auto_parallel_clamped:
+        print(
+            "Single-GPU trials requested; disabling automatic parallel execution. "
+            "Use --parallel_trials to override.",
+            flush=True,
+        )
     print(
         f"Scheduling up to {parallel_trials} parallel trial(s). "
         f"GPUs per trial: {base_options.num_gpu if base_options.num_gpu > 0 else 'CPU'}."
