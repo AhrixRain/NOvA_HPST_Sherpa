@@ -300,13 +300,13 @@ def _parameter_space() -> List[Parameter]:
     return [
         Continuous("learning_rate", [1e-5, 1e-2], scale="log"),
         Continuous("l2_penalty", [1e-4, 1e-1], scale="log"),
-        Choice("batch_size", [128, 192, 256]),
+        Choice("batch_size", [512]),
         Continuous("gradient_clip", [16.0, 80.0]),
         Discrete("learning_rate_warmup_epochs", [2, 4, 6, 8]),
         Choice("learning_rate_cycles", [1]),
         Continuous("loss_gamma", [1.0, 4.0]),
         Continuous("loss_beta", [0.999, 0.9999999]),
-        Choice("epochs", [20]),
+        Choice("epochs", [24]),
     ]
 
 
@@ -321,8 +321,8 @@ def _prepare_wandb_logger(args: argparse.Namespace, trial_index: int, options: O
 
     logger = WandbLogger(
         project=args.wandb_project,
-        name=f"hpst_sherpa_trial_{trial_index}_R8",
-        id=f"hpst_optim_server_{trial_index}_R8",
+        name=f"hpst_sherpa_trial_{trial_index}_R10",
+        id=f"hpst_optim_server_{trial_index}_R10",
         save_dir=str(base_dir.parent),
     )
     update_config(logger, vars(options))
