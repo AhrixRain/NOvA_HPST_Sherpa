@@ -109,7 +109,7 @@ def main(
         run_id = f"{timestamp}"
         base_dir = Path(log_dir) / "hpst" / run_id  
 
-        logger = WandbLogger(project='HPST', name=name, id='hpst_tune_train_r2', save_dir=str(base_dir.parent))
+        logger = WandbLogger(project='HPST', name=name, id='hpst_tune_train_r3', save_dir=str(base_dir.parent))
         update_config(logger, options)
 
 
@@ -169,13 +169,13 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--training_file", type=str, default="../data/training_prong_pixels_sparse_64.h5",
                         help="Input file containing training data.")
 
-    parser.add_argument("-o", "--options_file", type=str, default= "config/hpst/hpst_tune_nova_baseline.json",
+    parser.add_argument("-o", "--options_file", type=str, default= "config/hpst/hpst_tune_nova.json",
                         help="JSON file with option overloads.")
 
     parser.add_argument("-c", "--checkpoint", type=str, default=None,
                         help="Optional checkpoint to load from")
 
-    parser.add_argument("-n", "--name", type=str, default="hpst_run",
+    parser.add_argument("-n", "--name", type=str, default="hpst_run_tuneVer2",
                         help="The sub-directory to create for this run.")
 
     parser.add_argument("-l", "--log_dir", type=str, default= 'runs',
